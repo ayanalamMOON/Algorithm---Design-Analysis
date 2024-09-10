@@ -37,7 +37,7 @@ int main() {
     }
 
     // Print the middle part of the pentagon
-    for (int i = middleRow + 1; i <= height; ++i) {
+    for (int i = middleRow + 1; i < height; ++i) {
         // Print leading spaces
         for (int j = 1; j <= height - middleRow; ++j) {
             cout << " ";
@@ -54,14 +54,14 @@ int main() {
     }
 
     // Print the bottom part of the pentagon
-    for (int i = height - 1; i >= 1; --i) {
+    for (int i = 1; i <= height - middleRow; ++i) {
         // Print leading spaces
-        for (int j = height; j > i; --j) {
+        for (int j = 1; j <= height - middleRow; ++j) {
             cout << " ";
         }
         // Print stars and spaces inside the pentagon
-        for (int j = 1; j <= (2 * i - 1); ++j) {
-            if (j == 1 || j == (2 * i - 1)) {
+        for (int j = 1; j <= (2 * middleRow - 1); ++j) {
+            if (j == 1 || j == (2 * middleRow - 1) || i == height - middleRow) {
                 cout << "*";
             } else {
                 cout << " ";
