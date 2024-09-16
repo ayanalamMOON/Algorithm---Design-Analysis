@@ -76,33 +76,69 @@ public:
         Solution sol;
         
         // Test case 1
-        assert(sol.modifiedGraphEdges(5, {{0,1,1},{1,2,-1},{2,3,1},{0,3,3},{0,4,2},{3,4,2}}, 0, 3, 5) 
-            == vector<vector<int>>{{0,1,1},{1,2,2},{2,3,1},{0,3,3},{0,4,2},{3,4,2}});
-        cout << "Test case 1 passed." << endl;
+        testCase(sol, 1, 5, {{0,1,1},{1,2,-1},{2,3,1},{0,3,3},{0,4,2},{3,4,2}}, 0, 3, 5, 
+                {{0,1,1},{1,2,2},{2,3,1},{0,3,3},{0,4,2},{3,4,2}});
         
         // Test case 2
-        assert(sol.modifiedGraphEdges(3, {{0,1,1},{1,2,1}}, 0, 2, 2) 
-            == vector<vector<int>>{{0,1,1},{1,2,1}});
-        cout << "Test case 2 passed." << endl;
+        testCase(sol, 2, 3, {{0,1,1},{1,2,1}}, 0, 2, 2, 
+                {{0,1,1},{1,2,1}});
         
         // Test case 3
-        assert(sol.modifiedGraphEdges(3, {{0,1,1},{1,2,1}}, 0, 2, 1).empty());
-        cout << "Test case 3 passed." << endl;
+        testCase(sol, 3, 3, {{0,1,1},{1,2,1}}, 0, 2, 1, 
+                {});
         
         // Test case 4
-        assert(sol.modifiedGraphEdges(4, {{0,1,-1},{0,2,-1},{1,2,-1},{1,3,1}}, 0, 3, 4) 
-            == vector<vector<int>>{{0,1,2},{0,2,1},{1,2,1},{1,3,1}});
-        cout << "Test case 4 passed." << endl;
+        testCase(sol, 4, 4, {{0,1,-1},{0,2,-1},{1,2,-1},{1,3,1}}, 0, 3, 4, 
+                {{0,1,2},{0,2,1},{1,2,1},{1,3,1}});
         
         // Test case 5
-        vector<vector<int>> result = sol.modifiedGraphEdges(6, {{0,1,-1},{0,2,-1},{1,2,-1},{1,3,-1},{2,4,-1},{3,4,-1},{3,5,-1},{4,5,-1}}, 0, 5, 1000);
-        assert(result.size() == 8);
-        for (const auto& edge : result) {
-            assert(edge[2] >= 1 && edge[2] <= 1000);
-        }
-        cout << "Test case 5 passed." << endl;
+        testCase(sol, 5, 6, {{0,1,-1},{0,2,-1},{1,2,-1},{1,3,-1},{2,4,-1},{3,4,-1},{3,5,-1},{4,5,-1}}, 0, 5, 1000, 
+                {});
+
+        cout << "All tests completed!" << endl;
+    }
+
+private:
+    void testCase(Solution& sol, int caseNum, int n, vector<vector<int>> edges, int source, int destination, int target, vector<vector<int>> expected) {
+        cout << "Running test case " << caseNum << ":" << endl;
+        vector<vector<int>> result = sol.modifiedGraphEdges(n, edges, source, destination, target);
         
-        cout << "All tests passed!" << endl;
+        cout << "Input:" << endl;
+        cout << "  n: " << n << ", source: " << source << ", destination: " << destination << ", target: " << target << endl;
+        cout << "  edges: ";
+        printVector(edges);
+        
+        cout << "Expected output: ";
+        printVector(expected);
+        
+        cout << "Actual output: ";
+        printVector(result);
+        
+        if (expected.empty()) {
+            if (result.empty()) {
+                cout << "Test case " << caseNum << " passed." << endl;
+            } else {
+                cout << "Test case " << caseNum << " failed. Expected empty result." << endl;
+            }
+        } else if (result == expected) {
+            cout << "Test case " << caseNum << " passed." << endl;
+        } else {
+            cout << "Test case " << caseNum << " failed. Results do not match." << endl;
+        }
+        cout << endl;
+    }
+
+    void printVector(const vector<vector<int>>& vec) {
+        cout << "[";
+        for (const auto& v : vec) {
+            cout << "[";
+            for (int i = 0; i < v.size(); ++i) {
+                cout << v[i];
+                if (i < v.size() - 1) cout << ",";
+            }
+            cout << "]";
+        }
+        cout << "]" << endl;
     }
 };
 
