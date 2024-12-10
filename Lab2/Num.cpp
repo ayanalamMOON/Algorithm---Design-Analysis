@@ -18,7 +18,7 @@ int main() {
     // Use a loop to extract each digit, cube it, and add it to the sum
     while (originalNumber != 0) {
         remainder = originalNumber % 10;
-        result += std::pow(remainder, 3);
+        result += pow(remainder, 3);
         originalNumber /= 10;
     }
     
