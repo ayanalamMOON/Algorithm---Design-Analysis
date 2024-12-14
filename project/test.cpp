@@ -1,7 +1,6 @@
 /**
  * @file test.cpp
  * @brief Algorithm Performance Testing Framework
- * @author 
  * @version 1.1
  * @date 2024-01-20
  * 
@@ -23,10 +22,14 @@
 #include <map>
 #include <limits>
 #include <queue>
-#include <stack>  // Add this header for stack implementation
+#include <stack>
 #include <fstream>
 #include <ctime>
 #include <sstream>
+#include <thread>
+#include <future>
+#include <filesystem>
+#include <cmath>
 
 #ifdef _WIN32
     #include <windows.h>
@@ -54,6 +57,7 @@ namespace Config {
     constexpr int kMinDataSize = 1;
     constexpr double kTimeoutSeconds = 60.0;
     constexpr int kBenchmarkIterations = 5;
+    constexpr int kMaxThreads = 8;
 }
 
 // Logger class for performance metrics
@@ -167,6 +171,54 @@ struct Graph {
 struct ComplexityInfo {
     string timeComplexity;
     string spaceComplexity;
+};
+
+// Add CSV export functionality
+class CSVExporter {
+public:
+    static void exportResults(const vector<AlgorithmResult>& results, const string& filename) {
+        ofstream csv(filename);
+        csv << "Algorithm,Time (ms),Success,Error\n";
+        for (const auto& result : results) {
+            csv << result.algorithm_name << ","
+                << result.execution_time << ","
+                << (result.success ? "true" : "false") << ","
+                << result.error_message << "\n";
+        }
+    }
+};
+
+// Add theoretical complexity analyzer
+class ComplexityAnalyzer {
+public:
+    static string analyzePerformance(const string& algorithm, double time, int size) {
+        auto theoretical = complexityToFunction(algorithm, size);
+        double ratio = time / theoretical;
+        
+        stringstream analysis;
+        analysis << "Performance Analysis for " << algorithm << ":\n"
+                << "Actual time: " << time << "ms\n"
+                << "Theoretical time: " << theoretical << "ms\n"
+                << "Efficiency ratio: " << ratio << "\n"
+                << "Assessment: " << getEfficiencyAssessment(ratio);
+        return analysis.str();
+    }
+
+private:
+    static double complexityToFunction(const string& algorithm, int size) {
+        if (algorithm.find("Quick Sort") != string::npos)
+            return size * log2(size) * 0.1;
+        if (algorithm.find("Bubble Sort") != string::npos)
+            return size * size * 0.01;
+        // Add more complexity functions...
+        return size * 0.1;
+    }
+
+    static string getEfficiencyAssessment(double ratio) {
+        if (ratio < 0.8) return "Exceptionally efficient";
+        if (ratio < 1.2) return "Meeting theoretical bounds";
+        return "Consider optimization";
+    }
 };
 
 class AlgorithmPerformanceTester {
@@ -299,6 +351,7 @@ private:
         }
     }
 
+public:
     static void quickSort(vector<int>& arr, int low, int high) {
         if (low < high) {
             int pivot = arr[high];
@@ -318,6 +371,7 @@ private:
         }
     }
 
+public:
     static void mergeSort(vector<int>& arr, int left, int right) {
         if (left >= right) return;
 
@@ -344,6 +398,7 @@ private:
         }
     }
 
+public:
     static void countSort(vector<int>& arr) {
         int max = *max_element(arr.begin(), arr.end());
         vector<int> count(max + 1, 0);
@@ -359,6 +414,7 @@ private:
         arr = output;
     }
 
+public:
     static void heapSort(vector<int>& arr) {
         function<void(vector<int>&, int, int)> heapify = 
             [&heapify](vector<int>& arr, int n, int i) {
@@ -1691,6 +1747,28 @@ public:
             cout << "Benchmark error: " << e.what() << "\n";
         }
     }
+
+    // Add new method for parallel benchmarking
+    template<typename Func>
+    static vector<AlgorithmResult> parallelBenchmark(
+        const vector<pair<string, Func>>& algorithms,
+        int dataSize,
+        int threadCount = Config::kMaxThreads
+    ) {
+        vector<future<AlgorithmResult>> futures;
+        vector<AlgorithmResult> results;
+        
+        for (const auto& [name, algo] : algorithms) {
+            futures.push_back(async(launch::async, [name, algo, dataSize]() {
+                return BenchmarkWithStats(name, algo);
+            }));
+        }
+
+        for (auto& future : futures) {
+            results.push_back(future.get());
+        }
+        return results;
+    }
 };
 
 int main() {
@@ -1703,8 +1781,10 @@ int main() {
             cout << "1. Test Sorting and Searching Algorithms\n";
             cout << "2. Test Graph Algorithms\n";
             cout << "3. Test Dynamic Programming and String Matching\n";
-            cout << "4. Run Custom Benchmark\n";  // New option
+            cout << "4. Run Custom Benchmark\n";
             cout << "5. Exit\n";
+            cout << "6. Export Performance Results\n";
+            cout << "7. Run Parallel Benchmark\n";
             cout << "Enter your choice: ";
             cin >> choice;
 
@@ -1724,6 +1804,69 @@ int main() {
                 case 5:
                     cout << "Exiting...\n";
                     break;
+                case 6: {
+                    string filename;
+                    cout << "Enter export filename: ";
+                    cin >> filename;
+                    
+                    vector<AlgorithmResult> results;
+                    int size = 1000;
+                    vector<int> testData(size);
+                    generate(testData.begin(), testData.end(), rand);
+
+                    results.push_back(AlgorithmPerformanceTester::BenchmarkWithStats(
+                        "Quick Sort",
+                        [&testData]() {
+                            vector<int> temp = testData;
+                            AlgorithmPerformanceTester::quickSort(temp, 0, temp.size() - 1);
+                        }
+                    ));
+
+                    results.push_back(AlgorithmPerformanceTester::BenchmarkWithStats(
+                        "Merge Sort",
+                        [&testData]() {
+                            vector<int> temp = testData;
+                            AlgorithmPerformanceTester::mergeSort(temp, 0, temp.size() - 1);
+                        }
+                    ));
+
+                    CSVExporter::exportResults(results, filename);
+                    cout << "Results exported to " << filename << "\n";
+                    break;
+                }
+                case 7: {
+                    cout << "Running Parallel Benchmark...\n";
+                    int size;
+                    cout << "Enter data size: ";
+                    cin >> size;
+
+                    vector<int> testData(size);
+                    generate(testData.begin(), testData.end(), rand);
+
+                    vector<pair<string, function<void()>>> algorithms = {
+                        {"Quick Sort", [&testData]() {
+                            vector<int> temp = testData;
+                            AlgorithmPerformanceTester::quickSort(temp, 0, temp.size() - 1);
+                        }},
+                        {"Merge Sort", [&testData]() {
+                            vector<int> temp = testData;
+                            AlgorithmPerformanceTester::mergeSort(temp, 0, temp.size() - 1);
+                        }},
+                        {"Heap Sort", [&testData]() {
+                            vector<int> temp = testData;
+                            AlgorithmPerformanceTester::heapSort(temp);
+                        }},
+                        {"Count Sort", [&testData]() {
+                            vector<int> temp = testData;
+                            AlgorithmPerformanceTester::countSort(temp);
+                        }}
+                    };
+
+                    auto results = AlgorithmPerformanceTester::parallelBenchmark(algorithms, size);
+                    cout << "\nParallel Benchmark Results:\n";
+                    PerformanceVisualizer::DisplayBarChart(results);
+                    break;
+                }
                 default:
                     cout << "Invalid choice!\n";
             }

@@ -13,6 +13,8 @@ This guide provides step-by-step instructions and examples for using the Algorit
 5. [String Matching](#string-matching)
 6. [Performance Visualization Guide](#performance-visualization-guide)
 7. [Custom Benchmarking from Menu](#custom-benchmarking-from-menu)
+8. [Computational Geometry Algorithms](#computational-geometry-algorithms)
+9. [Saving Benchmark Results](#saving-benchmark-results)
 
 ## Getting Started
 
@@ -532,6 +534,30 @@ Merge Sort:  2048KB
    - Use consistent data sets
    - Consider different input sizes
    - Account for system state
+
+## Computational Geometry Algorithms
+
+This section covers computational geometry algorithms.
+
+### Convex Hull (Graham's Scan)
+
+- Computes the convex hull of a set of points.
+- Time Complexity: O(n log n)
+
+### Closest Pair of Points
+
+- Finds the pair of points with the minimum distance between them.
+- Time Complexity: O(n log n)
+
+## Saving Benchmark Results
+
+After running benchmarks, the program now saves the results to CSV files:
+
+- `sorting_performance.csv` for sorting algorithms
+- `graph_performance.csv` for graph algorithms
+- `computational_geometry_performance.csv` for computational geometry algorithms
+
+You can open these files in spreadsheet software for further analysis.
 
 ## Logging
 

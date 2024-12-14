@@ -40,3 +40,10 @@ Sat Dec 14 23:41:25 2024
 Custom Operation: 0.398221ms, Custom Algorithm
 Sat Dec 14 23:41:35 2024
 Vector Sort: 0.00416ms, Custom Algorithm
+Sun Dec 15 00:09:42 2024
+Heap Sort: 0.05996ms, Custom Algorithm
+
+Sun Dec 15 00:09:42 2024
+Merge Sort: 0.12164ms, Custom Algorithm
+Sun Dec 15 00:09:42 2024
+Count Sort: 0.37884ms, Custom Algorithm
