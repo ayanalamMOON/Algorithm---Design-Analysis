@@ -28,6 +28,23 @@
 #include <ctime>
 #include <sstream>
 
+#ifdef _WIN32
+    #include <windows.h>
+    #include <psapi.h>
+    #pragma comment(lib, "psapi.lib")
+#elif defined(__unix__) || defined(__unix) || defined(unix) || (defined(__APPLE__) && defined(__MACH__))
+    #include <unistd.h>
+    #include <sys/resource.h>
+    #if defined(__APPLE__) && defined(__MACH__)
+        #include <mach/mach.h>
+    #elif (defined(_AIX) || defined(__TOS__AIX__)) || (defined(__sun__) || defined(__sun) || defined(sun) && (defined(__SVR4) || defined(__svr4__)))
+        #include <fcntl.h>
+        #include <procfs.h>
+    #else
+        #include <sys/sysinfo.h>
+    #endif
+#endif
+
 using namespace std;
 
 // Configuration constants
@@ -745,7 +762,7 @@ private:
         int len = 0, i = 1;
         
         while (i < m) {
-            if (pattern[i] == pattern[len]) {
+            if (pattern[i] == len) {
                 lps[i++] = ++len;
             } else {
                 if (len != 0) len = lps[len - 1];
@@ -974,7 +991,168 @@ private:
         return result;
     }
 
+    // Add benchmark statistics structure
+    struct BenchmarkStats {
+        double min_time;
+        double max_time;
+        double avg_time;
+        double std_deviation;
+        size_t memory_used;
+        vector<double> individual_times;
+    };
+
+    // Add memory tracking
+    static size_t getCurrentMemoryUsage() {
+        #ifdef _WIN32
+            PROCESS_MEMORY_COUNTERS_EX pmc;
+            if (GetProcessMemoryInfo(GetCurrentProcess(), (PROCESS_MEMORY_COUNTERS*)&pmc, sizeof(pmc))) {
+                return pmc.WorkingSetSize;
+            }
+        #elif defined(__APPLE__) && defined(__MACH__)
+            struct mach_task_basic_info info;
+            mach_msg_type_number_t infoCount = MACH_TASK_BASIC_INFO_COUNT;
+            if (task_info(mach_task_self(), MACH_TASK_BASIC_INFO, (task_info_t)&info, &infoCount) == KERN_SUCCESS) {
+                return info.resident_size;
+            }
+        #elif defined(__linux__)
+            long rss = 0L;
+            FILE* fp = NULL;
+            if ((fp = fopen("/proc/self/statm", "r")) != NULL) {
+                if (fscanf(fp, "%*s%ld", &rss) == 1) {
+                    fclose(fp);
+                    return rss * sysconf(_SC_PAGESIZE);
+                }
+                fclose(fp);
+            }
+        #endif
+        return 0;  // Return 0 if memory info is unavailable
+    }
+
+    // Enhanced benchmark functionality
+    template<typename Func>
+    static BenchmarkStats DetailedBenchmark(Func&& algorithm, int iterations) {
+        BenchmarkStats stats{
+            numeric_limits<double>::max(),  // min_time
+            0.0,                           // max_time
+            0.0,                           // avg_time
+            0.0,                           // std_deviation
+            0,                             // memory_used
+            vector<double>()               // individual_times
+        };
+
+        size_t initial_memory = getCurrentMemoryUsage();
+        
+        // Warm-up run
+        algorithm();
+
+        // Actual benchmark runs
+        for (int i = 0; i < iterations; ++i) {
+            auto start = chrono::high_resolution_clock::now();
+            algorithm();
+            auto end = chrono::high_resolution_clock::now();
+            
+            double time = chrono::duration<double, milli>(end - start).count();
+            stats.individual_times.push_back(time);
+            stats.min_time = min(stats.min_time, time);
+            stats.max_time = max(stats.max_time, time);
+        }
+
+        // Calculate statistics
+        stats.avg_time = accumulate(stats.individual_times.begin(), 
+                                  stats.individual_times.end(), 0.0) / iterations;
+        
+        double variance = 0.0;
+        for (double time : stats.individual_times) {
+            variance += pow(time - stats.avg_time, 2);
+        }
+        stats.std_deviation = sqrt(variance / iterations);
+        
+        stats.memory_used = getCurrentMemoryUsage() - initial_memory;
+        
+        return stats;
+    }
+
 public:
+    // Add new public benchmark method with detailed statistics
+    template<typename Func>
+    static AlgorithmResult BenchmarkWithStats(
+        const string& name,
+        Func algorithm,
+        int iterations = Config::kBenchmarkIterations,
+        bool verbose = false
+    ) {
+        AlgorithmResult result;
+        result.algorithm_name = name;
+        result.success = true;
+
+        try {
+            auto stats = DetailedBenchmark(algorithm, iterations);
+            result.execution_time = stats.avg_time;
+
+            if (verbose) {
+                cout << "\nDetailed Statistics for " << name << ":\n"
+                     << "Min Time: " << stats.min_time << "ms\n"
+                     << "Max Time: " << stats.max_time << "ms\n"
+                     << "Avg Time: " << stats.avg_time << "ms\n"
+                     << "Std Dev: " << stats.std_deviation << "ms\n"
+                     << "Memory Used: " << (stats.memory_used / 1024.0) << "KB\n"
+                     << "Distribution:\n";
+
+                // Generate histogram of execution times
+                map<int, int> histogram;
+                for (double time : stats.individual_times) {
+                    histogram[static_cast<int>(time * 10)]++;
+                }
+
+                for (const auto& [bucket, count] : histogram) {
+                    cout << fixed << setprecision(1) 
+                         << (bucket / 10.0) << "ms: "
+                         << string(count, '*') << "\n";
+                }
+            }
+
+            Logger::LogPerformance(name, stats.avg_time, "Custom Algorithm");
+        } catch (const exception& e) {
+            result.success = false;
+            result.error_message = e.what();
+            Logger::LogError(name + " failed: " + result.error_message);
+        }
+
+        return result;
+    }
+
+    // Add public benchmark method for users
+    template<typename Func>
+    static AlgorithmResult BenchmarkAlgorithm(
+        const std::string& name,
+        Func algorithm,
+        int iterations = Config::kBenchmarkIterations
+    ) {
+        AlgorithmResult result;
+        result.algorithm_name = name;
+        result.success = true;
+
+        try {
+            std::vector<double> times;
+            for (int i = 0; i < iterations; ++i) {
+                auto start = std::chrono::high_resolution_clock::now();
+                algorithm();
+                auto end = std::chrono::high_resolution_clock::now();
+                times.push_back(std::chrono::duration<double, std::milli>(
+                    end - start).count());
+            }
+
+            result.execution_time = std::accumulate(times.begin(), times.end(), 0.0) / iterations;
+            Logger::LogPerformance(name, result.execution_time, "Custom Algorithm");
+        } catch (const std::exception& e) {
+            result.success = false;
+            result.error_message = e.what();
+            Logger::LogError(name + " failed: " + result.error_message);
+        }
+
+        return result;
+    }
+
     void runPerformanceTest() {
         try {
             int size;
@@ -1116,188 +1294,127 @@ public:
                 graph.addEdge(src, dest, weight);
             }
 
+            // Add algorithm selection menu
+            cout << "\nSelect graph algorithms to run:\n";
+            cout << "1. Shortest Path Algorithms (Dijkstra, Bellman-Ford, Floyd-Warshall)\n";
+            cout << "2. Graph Traversal (DFS, BFS)\n";
+            cout << "3. Minimum Spanning Tree (Prim's, Kruskal's)\n";
+            cout << "4. Flow Networks (Ford-Fulkerson, Edmonds-Karp)\n";
+            cout << "5. All Algorithms\n";
+            
+            int algorithmChoice;
+            cout << "Enter your choice (1-5): ";
+            if (!(cin >> algorithmChoice)) {
+                throw runtime_error("Invalid algorithm choice");
+            }
+
             int source;
             cout << "Enter source vertex: ";
             if (!(cin >> source) || source < 0 || source >= V) {
                 throw runtime_error("Invalid source vertex");
             }
 
-            cout << "\n--- Graph Algorithm Performance ---\n";
-            cout << setw(20) << "Algorithm" 
-                 << setw(15) << "Time (ms)"
-                 << setw(20) << "Time Complexity"
-                 << setw(20) << "Space Complexity\n";
-            cout << string(75, '-') << "\n";
+            // Vector to store performance results
+            vector<AlgorithmResult> results;
 
-            // Test Dijkstra's Algorithm
-            auto start = chrono::high_resolution_clock::now();
-            vector<int> dijkstraResult = dijkstra(graph, source);
-            auto end = chrono::high_resolution_clock::now();
-            double dijkstraTime = chrono::duration<double, milli>(end - start).count();
+            // Run selected algorithms based on user choice
+            if (algorithmChoice == 1 || algorithmChoice == 5) {
+                // Shortest Path Algorithms
+                cout << "\n--- Shortest Path Algorithms ---\n";
+                
+                // Test Dijkstra's Algorithm
+                auto result = BenchmarkWithStats("Dijkstra",
+                    [&]() { dijkstra(graph, source); }, 5, true);
+                results.push_back(result);
 
-            cout << setw(20) << "Dijkstra"
-                 << setw(15) << fixed << setprecision(4) << dijkstraTime
-                 << setw(20) << complexityMap["Dijkstra"].timeComplexity
-                 << setw(20) << complexityMap["Dijkstra"].spaceComplexity << "\n";
+                // Test Bellman-Ford Algorithm
+                auto bellmanFordResult = BenchmarkWithStats("Bellman-Ford",
+                    [&]() { bellmanFord(graph, source); }, 5, true);
+                results.push_back(bellmanFordResult);
 
-            // Test Bellman-Ford Algorithm
-            start = chrono::high_resolution_clock::now();
-            vector<int> bellmanFordResult = bellmanFord(graph, source);
-            end = chrono::high_resolution_clock::now();
-            double bellmanFordTime = chrono::duration<double, milli>(end - start).count();
-
-            cout << setw(20) << "Bellman-Ford"
-                 << setw(15) << fixed << setprecision(4) << bellmanFordTime
-                 << setw(20) << complexityMap["Bellman-Ford"].timeComplexity
-                 << setw(20) << complexityMap["Bellman-Ford"].spaceComplexity << "\n";
-
-            // Add Floyd-Warshall testing after Bellman-Ford
-            start = chrono::high_resolution_clock::now();
-            vector<vector<int>> floydWarshallResult = floydWarshall(graph);
-            end = chrono::high_resolution_clock::now();
-            double floydWarshallTime = chrono::duration<double, milli>(end - start).count();
-
-            cout << setw(20) << "Floyd-Warshall"
-                 << setw(15) << fixed << setprecision(4) << floydWarshallTime
-                 << setw(20) << complexityMap["Floyd-Warshall"].timeComplexity
-                 << setw(20) << complexityMap["Floyd-Warshall"].spaceComplexity << "\n";
-
-            // Print results
-            cout << "\nShortest distances from vertex " << source << ":\n";
-            for (int i = 0; i < V; i++) {
-                cout << "To vertex " << i << ": ";
-                cout << "Dijkstra: " << (dijkstraResult[i] == numeric_limits<int>::max() ? "INF" : to_string(dijkstraResult[i]));
-                cout << ", Bellman-Ford: " << (bellmanFordResult[i] == numeric_limits<int>::max() ? "INF" : to_string(bellmanFordResult[i])) << "\n";
+                // Add Floyd-Warshall testing after Bellman-Ford
+                auto floydWarshallResult = BenchmarkWithStats("Floyd-Warshall",
+                    [&]() { floydWarshall(graph); }, 5, true);
+                results.push_back(floydWarshallResult);
             }
 
-            // Update results printing
-            cout << "\nAll-pairs shortest paths:\n";
-            for (int i = 0; i < graph.V; i++) {
-                cout << "\nFrom vertex " << i << ":\n";
-                for (int j = 0; j < graph.V; j++) {
-                    if (i != j) {
-                        cout << "To vertex " << j << ": ";
-                        if (i == source) {
-                            cout << "Dijkstra: " 
-                                 << (dijkstraResult[j] == numeric_limits<int>::max() ? "INF" : to_string(dijkstraResult[j]))
-                                 << ", Bellman-Ford: "
-                                 << (bellmanFordResult[j] == numeric_limits<int>::max() ? "INF" : to_string(bellmanFordResult[j]));
-                        }
-                        cout << ", Floyd-Warshall: "
-                             << (floydWarshallResult[i][j] == numeric_limits<int>::max() ? "INF" : to_string(floydWarshallResult[i][j]))
-                             << "\n";
-                    }
+            if (algorithmChoice == 2 || algorithmChoice == 5) {
+                // Graph Traversal
+                cout << "\n--- Graph Traversal Algorithms ---\n";
+                
+                // Test DFS
+                auto dfsResult = BenchmarkWithStats("DFS",
+                    [&]() { depthFirstSearch(graph, source); }, 5, true);
+                results.push_back(dfsResult);
+                
+                // Test BFS
+                auto bfsResult = BenchmarkWithStats("BFS",
+                    [&]() { breadthFirstSearch(graph, source); }, 5, true);
+                results.push_back(bfsResult);
+
+                // Display traversal results
+                vector<int> dfsPath = depthFirstSearch(graph, source);
+                vector<int> bfsPath = breadthFirstSearch(graph, source);
+
+                cout << "\nDFS Path from vertex " << source << ": ";
+                for (int v : dfsPath) cout << v << " ";
+                cout << "\n";
+
+                cout << "BFS Path from vertex " << source << ": ";
+                for (int v : bfsPath) cout << v << " ";
+                cout << "\n";
+            }
+
+            if (algorithmChoice == 3 || algorithmChoice == 5) {
+                // Minimum Spanning Tree
+                cout << "\n--- Minimum Spanning Tree Algorithms ---\n";
+                
+                // Test Prim's MST
+                auto primResult = BenchmarkWithStats("Prim's MST",
+                    [&]() { primMST(graph); }, 5, true);
+                results.push_back(primResult);
+
+                vector<Edge> mst = primMST(graph);
+                cout << "\nPrim's MST Edges:\n";
+                int totalWeight = 0;
+                for (const Edge& e : mst) {
+                    cout << e.source << " -- " << e.dest << " (weight: " << e.weight << ")\n";
+                    totalWeight += e.weight;
                 }
+                cout << "Total MST Weight: " << totalWeight << "\n";
+
+                // Test Kruskal's MST
+                auto kruskalResult = BenchmarkWithStats("Kruskal's MST",
+                    [&]() { kruskalMST(graph); }, 5, true);
+                results.push_back(kruskalResult);
             }
 
-            // Add new algorithm tests
-            cout << "\n--- Additional Graph Algorithms ---\n";
+            if (algorithmChoice == 4 || algorithmChoice == 5) {
+                // Flow Networks
+                cout << "\n--- Flow Network Algorithms ---\n";
 
-            // Test Prim's MST
-            start = chrono::high_resolution_clock::now();
-            vector<Edge> primResult = primMST(graph);
-            end = chrono::high_resolution_clock::now();
-            double primTime = chrono::duration<double, milli>(end - start).count();
+                int sink;
+                cout << "Enter sink vertex for Ford-Fulkerson and Edmonds-Karp: ";
+                if (!(cin >> sink) || sink < 0 || sink >= graph.V) {
+                    throw runtime_error("Invalid sink vertex");
+                }
 
-            // Test Kruskal's MST
-            start = chrono::high_resolution_clock::now();
-            vector<Edge> kruskalResult = kruskalMST(graph);
-            end = chrono::high_resolution_clock::now();
-            double kruskalTime = chrono::duration<double, milli>(end - start).count();
+                // Test Ford-Fulkerson
+                auto fordFulkersonResult = BenchmarkWithStats("Ford-Fulkerson",
+                    [&]() { fordFulkerson(graph, source, sink); }, 5, true);
+                results.push_back(fordFulkersonResult);
 
-            // Test A* pathfinding
-            int goal;
-            cout << "Enter goal vertex for A* pathfinding: ";
-            if (!(cin >> goal) || goal < 0 || goal >= graph.V) {
-                throw runtime_error("Invalid goal vertex");
+                // Test Edmonds-Karp
+                auto edmondsKarpResult = BenchmarkWithStats("Edmonds-Karp",
+                    [&]() { edmondsKarp(graph, source, sink); }, 5, true);
+                results.push_back(edmondsKarpResult);
             }
 
-            start = chrono::high_resolution_clock::now();
-            vector<int> astarResult = astar(graph, source, goal);
-            end = chrono::high_resolution_clock::now();
-            double astarTime = chrono::duration<double, milli>(end - start).count();
+            // Display performance comparison
+            cout << "\n--- Performance Comparison ---\n";
+            PerformanceVisualizer::DisplayBarChart(results);
 
-            // Test Topological Sort
-            start = chrono::high_resolution_clock::now();
-            vector<int> topoResult = topologicalSort(graph);
-            end = chrono::high_resolution_clock::now();
-            double topoTime = chrono::duration<double, milli>(end - start).count();
-
-            // Test DFS
-            start = chrono::high_resolution_clock::now();
-            vector<int> dfsResult = depthFirstSearch(graph, source);
-            end = chrono::high_resolution_clock::now();
-            double dfsTime = chrono::duration<double, milli>(end - start).count();
-
-            cout << setw(20) << "DFS"
-                 << setw(15) << fixed << setprecision(4) << dfsTime
-                 << setw(20) << complexityMap["DFS"].timeComplexity
-                 << setw(20) << complexityMap["DFS"].spaceComplexity << "\n";
-
-            // Test BFS
-            start = chrono::high_resolution_clock::now();
-            vector<int> bfsResult = breadthFirstSearch(graph, source);
-            end = chrono::high_resolution_clock::now();
-            double bfsTime = chrono::duration<double, milli>(end - start).count();
-
-            cout << setw(20) << "BFS"
-                 << setw(15) << fixed << setprecision(4) << bfsTime
-                 << setw(20) << complexityMap["BFS"].timeComplexity
-                 << setw(20) << complexityMap["BFS"].spaceComplexity << "\n";
-
-            // Test Ford-Fulkerson
-            int sink;
-            cout << "Enter sink vertex for Ford-Fulkerson and Edmonds-Karp: ";
-            if (!(cin >> sink) || sink < 0 || sink >= graph.V) {
-                throw runtime_error("Invalid sink vertex");
-            }
-
-            start = chrono::high_resolution_clock::now();
-            int fordFulkersonResult = fordFulkerson(graph, source, sink);
-            end = chrono::high_resolution_clock::now();
-            double fordFulkersonTime = chrono::duration<double, milli>(end - start).count();
-
-            cout << setw(20) << "Ford-Fulkerson"
-                 << setw(15) << fixed << setprecision(4) << fordFulkersonTime
-                 << setw(20) << complexityMap["Ford-Fulkerson"].timeComplexity
-                 << setw(20) << complexityMap["Ford-Fulkerson"].spaceComplexity << "\n";
-
-            // Test Edmonds-Karp
-            start = chrono::high_resolution_clock::now();
-            int edmondsKarpResult = edmondsKarp(graph, source, sink);
-            end = chrono::high_resolution_clock::now();
-            double edmondsKarpTime = chrono::duration<double, milli>(end - start).count();
-
-            cout << setw(20) << "Edmonds-Karp"
-                 << setw(15) << fixed << setprecision(4) << edmondsKarpTime
-                 << setw(20) << complexityMap["Edmonds-Karp"].timeComplexity
-                 << setw(20) << complexityMap["Edmonds-Karp"].spaceComplexity << "\n";
-
-            // Print results
-            cout << "\nMinimum Spanning Tree Results:\n";
-            cout << "Prim's MST weight: " << accumulate(primResult.begin(), primResult.end(), 0,
-                [](int sum, const Edge& e) { return sum + e.weight; }) << "\n";
-            cout << "Kruskal's MST weight: " << accumulate(kruskalResult.begin(), kruskalResult.end(), 0,
-                [](int sum, const Edge& e) { return sum + e.weight; }) << "\n";
-
-            cout << "\nA* Path from " << source << " to " << goal << ": ";
-            for (int v : astarResult) cout << v << " ";
-            cout << "\n";
-
-            cout << "\nTopological Sort: ";
-            for (int v : topoResult) cout << v << " ";
-            cout << "\n";
-
-            cout << "\nDFS Result: ";
-            for (int v : dfsResult) cout << v << " ";
-            cout << "\n";
-
-            cout << "BFS Result: ";
-            for (int v : bfsResult) cout << v << " ";
-            cout << "\n";
-
-            cout << "Ford-Fulkerson Max Flow: " << fordFulkersonResult << "\n";
-            cout << "Edmonds-Karp Max Flow: " << edmondsKarpResult << "\n";
+            // ...rest of existing code...
 
         } catch (const exception& e) {
             cout << "Error in graph algorithms: " << e.what() << "\n";
@@ -1445,6 +1562,135 @@ public:
             const_cast<int&>(Config::kBenchmarkIterations) = iterations;
         }
     }
+
+    // Add new public method for custom benchmarking from menu
+    static void runCustomBenchmark() {
+        try {
+            cout << "\n=== Enhanced Custom Algorithm Benchmark ===\n";
+            cout << "Select benchmark type:\n";
+            cout << "1. Vector operations\n";
+            cout << "2. String operations\n";
+            cout << "3. Custom data operation\n";
+            cout << "4. Algorithm comparison\n";
+            cout << "5. Memory usage analysis\n";
+            
+            int choice;
+            cout << "Enter choice: ";
+            if (!(cin >> choice)) {
+                throw runtime_error("Invalid input");
+            }
+
+            switch (choice) {
+                case 1: {
+                    int size;
+                    cout << "Enter vector size: ";
+                    if (!(cin >> size) || size <= 0) {
+                        throw runtime_error("Invalid size");
+                    }
+                    
+                    vector<int> data(size);
+                    generate(data.begin(), data.end(), rand);
+
+                    auto result = BenchmarkAlgorithm(
+                        "Vector Sort",
+                        [&]() { sort(data.begin(), data.end()); }
+                    );
+
+                    cout << "\nBenchmark Results:\n";
+                    cout << "Algorithm: " << result.algorithm_name << "\n";
+                    cout << "Time: " << result.execution_time << "ms\n";
+                    cout << "Status: " << (result.success ? "Success" : "Failed") << "\n";
+                    if (!result.success) {
+                        cout << "Error: " << result.error_message << "\n";
+                    }
+                    break;
+                }
+                case 2: {
+                    string text;
+                    cout << "Enter text to process: ";
+                    cin.ignore();
+                    getline(cin, text);
+
+                    auto result = BenchmarkAlgorithm(
+                        "String Reverse",
+                        [&]() { string copy = text; reverse(copy.begin(), copy.end()); }
+                    );
+
+                    cout << "\nBenchmark Results:\n";
+                    cout << "Algorithm: " << result.algorithm_name << "\n";
+                    cout << "Time: " << result.execution_time << "ms\n";
+                    cout << "Status: " << (result.success ? "Success" : "Failed") << "\n";
+                    break;
+                }
+                case 3: {
+                    cout << "Enter number of iterations: ";
+                    int iterations;
+                    if (!(cin >> iterations) || iterations <= 0) {
+                        throw runtime_error("Invalid iterations count");
+                    }
+
+                    auto result = BenchmarkAlgorithm(
+                        "Custom Operation",
+                        []() { 
+                            // Example custom operation
+                            volatile int sum = 0;
+                            for(int i = 0; i < 1000000; i++) sum += i;
+                        },
+                        iterations
+                    );
+
+                    cout << "\nBenchmark Results:\n";
+                    cout << "Algorithm: " << result.algorithm_name << "\n";
+                    cout << "Time: " << result.execution_time << "ms\n";
+                    cout << "Status: " << (result.success ? "Success" : "Failed") << "\n";
+                    cout << "Iterations: " << iterations << "\n";
+                    break;
+                }
+                case 4: {
+                    // Algorithm comparison
+                    cout << "Enter vector size for comparison: ";
+                    int size;
+                    cin >> size;
+                    vector<int> data(size);
+                    generate(data.begin(), data.end(), rand);
+
+                    vector<AlgorithmResult> results;
+                    
+                    // Compare different sorting algorithms
+                    results.push_back(BenchmarkWithStats("STL Sort",
+                        [&]() { sort(data.begin(), data.end()); }, 10, true));
+                    
+                    results.push_back(BenchmarkWithStats("Quick Sort",
+                        [&]() { 
+                            vector<int> temp = data;
+                            quickSort(temp, 0, temp.size() - 1); 
+                        }, 10, true));
+
+                    PerformanceVisualizer::DisplayBarChart(results);
+                    break;
+                }
+
+                case 5: {
+                    // Memory usage analysis
+                    cout << "Enter data structure size: ";
+                    int size;
+                    cin >> size;
+
+                    BenchmarkWithStats("Vector Memory",
+                        [size]() {
+                            vector<int> vec(size);
+                            generate(vec.begin(), vec.end(), rand);
+                            sort(vec.begin(), vec.end());
+                        }, 5, true);
+                    break;
+                }
+                default:
+                    throw runtime_error("Invalid choice");
+            }
+        } catch (const exception& e) {
+            cout << "Benchmark error: " << e.what() << "\n";
+        }
+    }
 };
 
 int main() {
@@ -1453,10 +1699,12 @@ int main() {
         
         int choice;
         do {
-            cout << "\n1. Test Sorting and Searching Algorithms\n";
+            cout << "\n=== Algorithm Performance Testing Framework ===\n";
+            cout << "1. Test Sorting and Searching Algorithms\n";
             cout << "2. Test Graph Algorithms\n";
             cout << "3. Test Dynamic Programming and String Matching\n";
-            cout << "4. Exit\n";
+            cout << "4. Run Custom Benchmark\n";  // New option
+            cout << "5. Exit\n";
             cout << "Enter your choice: ";
             cin >> choice;
 
@@ -1471,12 +1719,15 @@ int main() {
                     tester.runAdvancedAlgorithms();
                     break;
                 case 4:
+                    AlgorithmPerformanceTester::runCustomBenchmark();
+                    break;
+                case 5:
                     cout << "Exiting...\n";
                     break;
                 default:
                     cout << "Invalid choice!\n";
             }
-        } while (choice != 4);
+        } while (choice != 5);
     } catch (const exception& e) {
         Logger::LogError("Fatal error in main: " + std::string(e.what()));
         cout << "Fatal error: " << e.what() << "\n";

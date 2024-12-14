@@ -1,0 +1,42 @@
+Sat Dec 14 23:19:50 2024
+Vector Sort: 0.00092ms, Custom Algorithm
+Sat Dec 14 23:20:06 2024
+String Reverse: 0.0006ms, Custom Algorithm
+Sat Dec 14 23:26:02 2024
+STL Sort: 0.00022ms, Custom Algorithm
+Sat Dec 14 23:26:02 2024
+Quick Sort: 0.00109ms, Custom Algorithm
+Sat Dec 14 23:27:29 2024
+Vector Memory: 0.00096ms, Custom Algorithm
+Sat Dec 14 23:36:28 2024
+Dijkstra: 0.00236ms, Custom Algorithm
+Sat Dec 14 23:36:28 2024
+Bellman-Ford: 0.00126ms, Custom Algorithm
+Sat Dec 14 23:36:28 2024
+Floyd-Warshall: 0.00742ms, Custom Algorithm
+Sat Dec 14 23:38:20 2024
+Dijkstra: 0.00254ms, Custom Algorithm
+Sat Dec 14 23:38:20 2024
+Bellman-Ford: 0.0007ms, Custom Algorithm
+Sat Dec 14 23:38:20 2024
+Floyd-Warshall: 0.00478ms, Custom Algorithm
+Sat Dec 14 23:38:20 2024
+DFS: 0.00318ms, Custom Algorithm
+Sat Dec 14 23:38:20 2024
+BFS: 0.00282ms, Custom Algorithm
+Sat Dec 14 23:38:20 2024
+Prim's MST: 0.00484ms, Custom Algorithm
+Sat Dec 14 23:38:20 2024
+Kruskal's MST: 0.00286ms, Custom Algorithm
+Sat Dec 14 23:38:29 2024
+Ford-Fulkerson: 0.0059ms, Custom Algorithm
+Sat Dec 14 23:38:29 2024
+Edmonds-Karp: 0.00546ms, Custom Algorithm
+Sat Dec 14 23:40:56 2024
+String Reverse: 0.00092ms, Custom Algorithm
+Sat Dec 14 23:41:11 2024
+Vector Memory: 0.00124ms, Custom Algorithm
+Sat Dec 14 23:41:25 2024
+Custom Operation: 0.398221ms, Custom Algorithm
+Sat Dec 14 23:41:35 2024
+Vector Sort: 0.00416ms, Custom Algorithm
