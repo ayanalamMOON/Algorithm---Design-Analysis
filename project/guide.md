@@ -1,3 +1,4 @@
+# Algorithm Performance Testing Framework User Guide
 /**
  * @file test.cpp
  * @brief Algorithm Performance Testing Framework
@@ -43,7 +44,7 @@ namespace Config {
 class Logger {
 public:
     static void LogPerformance(const std::string& algorithm, double time_ms, 
-                            const std::string& complexity) {
+                             const std::string& complexity) {
         std::ofstream log_file("algorithm_performance.log", std::ios::app);
         if (log_file.is_open()) {
             std::time_t now = std::time(nullptr);
@@ -1484,3 +1485,248 @@ int main() {
     }
     return 0;
 }
+## Overview
+
+This guide provides step-by-step instructions and examples for using the Algorithm Performance Testing Framework.
+
+## Table of Contents
+
+1. [Getting Started](#getting-started)
+2. [Sorting and Searching](#sorting-and-searching)
+3. [Graph Algorithms](#graph-algorithms)
+4. [Dynamic Programming](#dynamic-programming)
+5. [String Matching](#string-matching)
+
+## Getting Started
+
+When you run the program, you'll see this menu:
+```
+1. Test Sorting and Searching Algorithms
+2. Test Graph Algorithms
+3. Test Dynamic Programming and String Matching
+4. Exit
+Enter your choice:
+```
+
+## Sorting and Searching
+
+### Example 1: Testing Sorting Algorithms
+
+Input:
+```
+Enter your choice: 1
+Enter the number of elements to generate: 10
+```
+
+Output:
+```
+Generated integers: 423 871 159 742 315 968 247 563 891 104
+
+--- Sorting Algorithm Performance ---
+Algorithm            Time (ms)    Time Complexity    Space Complexity
+---------------------------------------------------------------
+Bubble Sort          0.0842      O(n²)              O(1)
+Selection Sort       0.0654      O(n²)              O(1)
+Quick Sort           0.0123      O(n log n)         O(log n)
+Merge Sort           0.0156      O(n log n)         O(n)
+Heap Sort            0.0189      O(n log n)         O(1)
+...
+
+Sorted integers: 104 159 247 315 423 563 742 871 891 968
+```
+
+### Example 2: Searching
+
+After sorting, you can search for a value:
+
+Input:
+```
+Enter a value to search: 315
+```
+
+Output:
+```
+--- Searching Algorithm Performance ---
+Algorithm            Time (ms)    Time Complexity    Space Complexity    Result
+-------------------------------------------------------------------------
+Linear Search        0.0012      O(n)              O(1)                Found
+Binary Search        0.0008      O(log n)          O(1)                Found
+```
+
+## Graph Algorithms
+
+### Example 1: Creating and Analyzing a Graph
+
+Input:
+```
+Enter your choice: 2
+Enter number of vertices (1-1000): 4
+Enter number of edges (0-12): 5
+Enter edge information (source destination weight):
+0 1 10
+0 2 15
+1 2 5
+2 3 20
+1 3 25
+Enter source vertex: 0
+```
+
+Output:
+```
+--- Graph Algorithm Performance ---
+Algorithm            Time (ms)    Time Complexity    Space Complexity
+----------------------------------------------------------------
+Dijkstra             0.0234      O(V log V + E)     O(V)
+Shortest distances from vertex 0:
+To vertex 1: 10
+To vertex 2: 15
+To vertex 3: 35
+```
+
+### Example 2: Maximum Flow
+
+Input:
+```
+Enter sink vertex for Ford-Fulkerson and Edmonds-Karp: 3
+```
+
+Output:
+```
+Ford-Fulkerson Max Flow: 30
+Edmonds-Karp Max Flow: 30
+```
+
+## Dynamic Programming
+
+### Example 1: 0/1 Knapsack Problem
+
+Input:
+```
+Enter your choice: 3
+Enter number of items for Knapsack: 3
+Enter values and weights:
+Item 1 - Value: 60
+Item 1 - Weight: 10
+Item 2 - Value: 100
+Item 2 - Weight: 20
+Item 3 - Value: 120
+Item 3 - Weight: 30
+Enter knapsack capacity: 50
+```
+
+Output:
+```
+Maximum value: 220
+Selected items: 2 1
+```
+
+### Example 2: Matrix Chain Multiplication
+
+Input:
+```
+Enter number of matrices: 4
+Enter matrix dimensions:
+p0: 30
+p1: 35
+p2: 15
+p3: 5
+p4: 10
+```
+
+Output:
+```
+Minimum operations: 15125
+Multiplication order: 0 1 2 3
+```
+
+## String Matching
+
+### Example: Pattern Matching
+
+Input:
+```
+Enter text: AABAACAADAABAAABAA
+Enter pattern: AABA
+```
+
+Output:
+```
+KMP matches found at positions: 0 9 13
+Rabin-Karp matches found at positions: 0 9 13
+```
+
+## Error Handling Examples
+
+### Invalid Input Example
+
+Input:
+```
+Enter number of elements to generate: -5
+```
+
+Output:
+```
+Error: Invalid size: must be between 1 and 1000000
+```
+
+### Invalid Graph Input
+
+Input:
+```
+Enter number of vertices (1-1000): 0
+```
+
+Output:
+```
+Error: Invalid number of vertices
+```
+
+## Performance Visualization
+
+The program displays performance metrics using ASCII bar charts:
+```
+Algorithm            Performance
+--------------------------------
+Quick Sort       |##### 0.0123ms
+Merge Sort       |###### 0.0156ms
+Heap Sort        |####### 0.0189ms
+Bubble Sort      |################################ 0.0842ms
+```
+
+## Logging
+
+The program creates two log files:
+- `algorithm_performance.log`: Records execution times and complexities
+- `error.log`: Records any errors that occur during execution
+
+Example log entry:
+```
+Thu Jan 20 10:30:45 2024
+Quick Sort: 0.0123ms, O(n log n)
+```
+
+## Best Practices
+
+1. Start with small data sets to verify correctness
+2. Use larger data sets for performance testing
+3. Consider algorithm trade-offs based on:
+   - Input size
+   - Data distribution
+   - Memory constraints
+   - Time constraints
+
+## Tips
+
+1. For sorting/searching:
+   - Use Quick Sort for general-purpose sorting
+   - Use Binary Search when data is sorted
+   - Consider Count Sort for integer data with small range
+
+2. For graph algorithms:
+   - Use Dijkstra for non-negative weighted graphs
+   - Use Bellman-Ford when negative weights are present
+   - Use A* when heuristic information is available
+
+3. For dynamic programming:
+   - Verify input constraints carefully
+   - Consider space-optimized versions for large inputs
