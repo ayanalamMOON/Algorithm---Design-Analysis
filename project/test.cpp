@@ -1,8 +1,4 @@
 /**
- * @file test.cpp
- * @brief Algorithm Performance Testing Framework
- * @version 1.1
- * @date 2024-01-20
  * 
  * This program implements and analyzes various algorithms including:
  * - Sorting algorithms
@@ -1230,31 +1226,82 @@ public:
                 {"Count Sort", [this](vector<int>& arr) { countSort(arr); }},
                 {"Radix Sort", [this](vector<int>& arr) { radixSort(arr); }},
                 {"Bucket Sort", [this](vector<int>& arr) { bucketSort(arr); }},
-                {"C++ Standard Sort", [](vector<int>& arr) { sort(arr.begin(), arr.end()); }}
+                {"C++ Standard Sort", [](vector<int>& arr) { sort(arr.begin(), arr.end()); }},
+                {"Shell Sort", [this](vector<int>& arr) {
+                    int n = arr.size();
+                    // Start with a large gap, then reduce the gap
+                    for (int gap = n/2; gap > 0; gap /= 2) {
+                        // Do a gapped insertion sort
+                        for (int i = gap; i < n; i++) {
+                            int temp = arr[i];
+                            int j;
+                            // Shift earlier gap-sorted elements up until the correct location for arr[i] is found
+                            for (j = i; j >= gap && arr[j - gap] > temp; j -= gap) {
+                                arr[j] = arr[j - gap];
+                            }
+                            // Put temp (the original arr[i]) in its correct location
+                            arr[j] = temp;
+                        }
+                    }
+                }},
+                {"Cocktail Sort", [this](vector<int>& arr) {
+                    bool swapped = true;
+                    int start = 0;
+                    int end = arr.size() - 1;
+                    while (swapped) {
+                        swapped = false;
+                        for (int i = start; i < end; ++i) {
+                            if (arr[i] > arr[i + 1]) {
+                                swap(arr[i], arr[i + 1]);
+                                swapped = true;
+                            }
+                        }
+                        if (!swapped) break;
+                        swapped = false;
+                        --end;
+                        for (int i = end - 1; i >= start; --i) {
+                            if (arr[i] > arr[i + 1]) {
+                                swap(arr[i], arr[i + 1]);
+                                swapped = true;
+                            }
+                        }
+                        ++start;
+                    }
+                }}
             };
 
-            cout << "\n--- Sorting Algorithm Performance ---\n";
-            cout << setw(20) << "Algorithm" 
-                    << setw(15) << "Time (ms)"
-                    << setw(20) << "Time Complexity"
-                    << setw(20) << "Space Complexity\n";
-            cout << string(75, '-') << "\n";
+            // Performance measurement and results collection
+            vector<AlgorithmResult> results;
+            vector<pair<string, double>> sortingTimes;  // Add this line to declare sortingTimes
 
-            vector<pair<string, double>> sortingTimes;
-
-            for (const auto& algo : sortingAlgorithms) {
-                double time = measurePerformance(algo.second);
-                sortingTimes.push_back({algo.first, time});
-                
-                const auto& complexity = complexityMap[algo.first];
-                cout << fixed << setprecision(4)
-                        << setw(20) << algo.first
-                        << setw(15) << time
-                        << setw(20) << complexity.timeComplexity
-                        << setw(20) << complexity.spaceComplexity << "\n";
+            for (const auto& [name, algorithm] : sortingAlgorithms) {
+                vector<int> testArray = workingData;  // Create a copy for each test
+                auto result = BenchmarkWithStats(name, 
+                    [&]() { algorithm(testArray); },
+                    Config::kBenchmarkIterations,
+                    true  // Enable verbose output
+                );
+                results.push_back(result);
+                sortingTimes.push_back({name, result.execution_time});  // Store timing results
             }
 
-            // Find fastest sorting algorithm
+            // Display results
+            cout << "\nSorting Algorithm Performance Summary:\n";
+            cout << string(60, '-') << "\n";
+            cout << setw(20) << "Algorithm" 
+                 << setw(15) << "Time (ms)"
+                 << setw(15) << "Memory (KB)"
+                 << setw(10) << "Status\n";
+            cout << string(60, '-') << "\n";
+
+            for (const auto& result : results) {
+                cout << setw(20) << result.algorithm_name
+                     << setw(15) << fixed << setprecision(3) << result.execution_time
+                     << setw(15) << "N/A"  // Memory usage (if implemented)
+                     << setw(10) << (result.success ? "Pass" : "Fail") << "\n";
+            }
+
+            // Find fastest sorting algorithm using sortingTimes
             auto fastestSort = *min_element(sortingTimes.begin(), sortingTimes.end(),
                 [](const auto& a, const auto& b) { return a.second < b.second; });
             cout << "\nFastest Sorting Algorithm: " << fastestSort.first 
@@ -1315,6 +1362,58 @@ public:
                 [](const auto& a, const auto& b) { return a.second < b.second; });
             cout << "\nFastest Searching Algorithm: " << fastestSearch.first 
                     << " (" << fastestSearch.second << " ms)\n";
+
+            // Display performance comparison
+            cout << "\n--- Algorithm Performance Comparison ---\n";
+            cout << string(60, '-') << "\n";
+            PerformanceVisualizer::DisplayBarChart(results);
+
+            // Calculate and display statistics
+            double totalTime = 0;
+            double maxTime = 0;
+            double minTime = numeric_limits<double>::max();
+            string fastestAlgo, slowestAlgo;
+
+            for (const auto& result : results) {
+                totalTime += result.execution_time;
+                if (result.execution_time > maxTime) {
+                    maxTime = result.execution_time;
+                    slowestAlgo = result.algorithm_name;
+                }
+                if (result.execution_time < minTime) {
+                    minTime = result.execution_time;
+                    fastestAlgo = result.algorithm_name;
+                }
+            }
+
+            double avgTime = totalTime / results.size();
+
+            // Print detailed analysis
+            cout << "\nPerformance Analysis:\n";
+            cout << string(60, '-') << "\n";
+            cout << "Total algorithms tested: " << results.size() << "\n";
+            cout << "Average execution time: " << fixed << setprecision(3) << avgTime << "ms\n";
+            cout << "Fastest algorithm: " << fastestAlgo << " (" << minTime << "ms)\n";
+            cout << "Slowest algorithm: " << slowestAlgo << " (" << maxTime << "ms)\n";
+            cout << "Performance ratio (fastest/slowest): " << (minTime/maxTime) << "\n";
+
+            // Print complexity analysis
+            cout << "\nComplexity Analysis:\n";
+            cout << string(60, '-') << "\n";
+            for (const auto& result : results) {
+                const auto& complexity = complexityMap[result.algorithm_name];
+                cout << setw(20) << left << result.algorithm_name 
+                     << "Time: " << setw(15) << complexity.timeComplexity 
+                     << "Space: " << complexity.spaceComplexity << "\n";
+            }
+
+            // Log the results
+            for (const auto& result : results) {
+                Logger::LogPerformance(result.algorithm_name, 
+                                     result.execution_time,
+                                     complexityMap[result.algorithm_name].timeComplexity);
+            }
+
         } catch (const exception& e) {
             cout << "Error in performance test: " << e.what() << "\n";
         }
@@ -1470,7 +1569,54 @@ public:
             cout << "\n--- Performance Comparison ---\n";
             PerformanceVisualizer::DisplayBarChart(results);
 
-            // ...rest of existing code...
+            // Display detailed algorithm-specific results
+            if (algorithmChoice == 1 || algorithmChoice == 5) {
+                // Display shortest path results
+                cout << "\nShortest Path Results from vertex " << source << ":\n";
+                auto distances = dijkstra(graph, source);
+                cout << "Dijkstra's Algorithm:\n";
+                for (int i = 0; i < V; i++) {
+                    cout << "To vertex " << i << ": " << distances[i] << "\n";
+                }
+
+                auto bellmanDistances = bellmanFord(graph, source);
+                cout << "\nBellman-Ford Algorithm:\n";
+                for (int i = 0; i < V; i++) {
+                    cout << "To vertex " << i << ": " << bellmanDistances[i] << "\n";
+                }
+
+                auto allPairDistances = floydWarshall(graph);
+                cout << "\nFloyd-Warshall All-Pairs Shortest Paths:\n";
+                for (int i = 0; i < V; i++) {
+                    cout << "From vertex " << i << ":\n";
+                    for (int j = 0; j < V; j++) {
+                        if (allPairDistances[i][j] == numeric_limits<int>::max())
+                            cout << "INF ";
+                        else
+                            cout << allPairDistances[i][j] << " ";
+                    }
+                    cout << "\n";
+                }
+            }
+
+            // Print overall performance summary
+            cout << "\nOverall Performance Summary:\n";
+            cout << string(50, '-') << "\n";
+            cout << "Total algorithms tested: " << results.size() << "\n";
+            
+            // Find best performing algorithm
+            auto bestAlgo = min_element(results.begin(), results.end(),
+                [](const AlgorithmResult& a, const AlgorithmResult& b) {
+                    return a.execution_time < b.execution_time;
+                });
+            
+            cout << "Best performing algorithm: " << bestAlgo->algorithm_name 
+                 << " (" << bestAlgo->execution_time << "ms)\n";
+
+            // Print execution status summary
+            int successful = count_if(results.begin(), results.end(),
+                [](const AlgorithmResult& r) { return r.success; });
+            cout << "Successful executions: " << successful << "/" << results.size() << "\n";
 
         } catch (const exception& e) {
             cout << "Error in graph algorithms: " << e.what() << "\n";
@@ -1604,8 +1750,57 @@ public:
                     [&]() { algo.second(workingData, searchTarget); }));
             }
 
-            // Rest of the implementation
-            // ...existing code...
+            // Display performance comparison
+            cout << "\n--- Algorithm Performance Comparison ---\n";
+            cout << string(60, '-') << "\n";
+            PerformanceVisualizer::DisplayBarChart(results);
+
+            // Calculate and display statistics
+            double totalTime = 0;
+            double maxTime = 0;
+            double minTime = numeric_limits<double>::max();
+            string fastestAlgo, slowestAlgo;
+
+            for (const auto& result : results) {
+                totalTime += result.execution_time;
+                if (result.execution_time > maxTime) {
+                    maxTime = result.execution_time;
+                    slowestAlgo = result.algorithm_name;
+                }
+                if (result.execution_time < minTime) {
+                    minTime = result.execution_time;
+                    fastestAlgo = result.algorithm_name;
+                }
+            }
+
+            double avgTime = totalTime / results.size();
+
+            // Print detailed analysis
+            cout << "\nPerformance Analysis:\n";
+            cout << string(60, '-') << "\n";
+            cout << "Total algorithms tested: " << results.size() << "\n";
+            cout << "Average execution time: " << fixed << setprecision(3) << avgTime << "ms\n";
+            cout << "Fastest algorithm: " << fastestAlgo << " (" << minTime << "ms)\n";
+            cout << "Slowest algorithm: " << slowestAlgo << " (" << maxTime << "ms)\n";
+            cout << "Performance ratio (fastest/slowest): " << (minTime/maxTime) << "\n";
+
+            // Print complexity analysis
+            cout << "\nComplexity Analysis:\n";
+            cout << string(60, '-') << "\n";
+            for (const auto& result : results) {
+                const auto& complexity = complexityMap[result.algorithm_name];
+                cout << setw(20) << left << result.algorithm_name 
+                     << "Time: " << setw(15) << complexity.timeComplexity 
+                     << "Space: " << complexity.spaceComplexity << "\n";
+            }
+
+            // Log the results
+            for (const auto& result : results) {
+                Logger::LogPerformance(result.algorithm_name, 
+                                     result.execution_time,
+                                     complexityMap[result.algorithm_name].timeComplexity);
+            }
+
         } catch (const std::exception& e) {
             Logger::LogError("Performance test failed: " + string(e.what()));
             throw;
@@ -1843,7 +2038,9 @@ int main() {
                     vector<int> testData(size);
                     generate(testData.begin(), testData.end(), rand);
 
+                    // Enhanced algorithm collection with more variety
                     vector<pair<string, function<void()>>> algorithms = {
+                        // Sorting Algorithms
                         {"Quick Sort", [&testData]() {
                             vector<int> temp = testData;
                             AlgorithmPerformanceTester::quickSort(temp, 0, temp.size() - 1);
@@ -1859,14 +2056,134 @@ int main() {
                         {"Count Sort", [&testData]() {
                             vector<int> temp = testData;
                             AlgorithmPerformanceTester::countSort(temp);
+                        }},
+                        {"Radix Sort", [&testData]() {
+                            vector<int> temp = testData;
+                            AlgorithmPerformanceTester::radixSort(temp);
+                        }},
+                        {"Bucket Sort", [&testData]() {
+                            vector<int> temp = testData;
+                            AlgorithmPerformanceTester::bucketSort(temp);
+                        }},
+                        {"Shell Sort", [&testData]() {
+                            vector<int> temp = testData;
+                            int n = temp.size();
+                            for (int gap = n/2; gap > 0; gap /= 2) {
+                                for (int i = gap; i < n; i++) {
+                                    int tempVal = temp[i];
+                                    int j;
+                                    for (j = i; j >= gap && temp[j - gap] > tempVal; j -= gap) {
+                                        temp[j] = temp[j - gap];
+                                    }
+                                    temp[j] = tempVal;
+                                }
+                            }
+                        }},
+                        // Searching Algorithms (on sorted data)
+                        {"Binary Search", [&testData]() {
+                            vector<int> sorted = testData;
+                            sort(sorted.begin(), sorted.end());
+                            for(int i = 0; i < 100; i++) { // Multiple searches
+                                AlgorithmPerformanceTester::binarySearch(sorted, i);
+                            }
+                        }},
+                        // Graph Algorithms
+                        {"Graph Operations", [size]() {
+                            Graph g(size/10, size/5); // Create smaller graph
+                            for(int i = 0; i < size/5; i++) {
+                                int src = rand() % (size/10);
+                                int dest = rand() % (size/10);
+                                g.addEdge(src, dest, rand() % 100);
+                            }
+                            AlgorithmPerformanceTester::dijkstra(g, 0);
+                        }},
+                        // String Operations
+                        {"String Matching", [size]() {
+                            string text(size, 'a');
+                            for(char& c : text) c = 'a' + (rand() % 26);
+                            string pattern = text.substr(size/2, 10);
+                            AlgorithmPerformanceTester::KMPSearch(text, pattern);
                         }}
                     };
 
-                    auto results = AlgorithmPerformanceTester::parallelBenchmark(algorithms, size);
-                    cout << "\nParallel Benchmark Results:\n";
-                    PerformanceVisualizer::DisplayBarChart(results);
+                    cout << "\nSelect benchmark mode:\n";
+                    cout << "1. Run all algorithms\n";
+                    cout << "2. Select specific algorithms\n";
+                    cout << "3. Run comparison with different data sizes\n";
+                    int benchmarkMode;
+                    cin >> benchmarkMode;
+
+                    vector<AlgorithmResult> results;
+                    switch(benchmarkMode) {
+                        case 1: {
+                            results = AlgorithmPerformanceTester::parallelBenchmark(algorithms, size);
+                            break;
+                        }
+                        case 2: {
+                            vector<pair<string, function<void()>>> selectedAlgos;
+                            cout << "Available algorithms:\n";
+                            for(int i = 0; i < algorithms.size(); i++) {
+                                cout << i + 1 << ". " << algorithms[i].first << "\n";
+                            }
+                            cout << "Enter algorithm numbers (0 to finish): ";
+                            while(true) {
+                                int idx;
+                                cin >> idx;
+                                if(idx == 0) break;
+                                if(idx > 0 && idx <= algorithms.size()) {
+                                    selectedAlgos.push_back(algorithms[idx-1]);
+                                }
+                            }
+                            results = AlgorithmPerformanceTester::parallelBenchmark(selectedAlgos, size);
+                            break;
+                        }
+                        case 3: {
+                            vector<int> sizes = {1000, 10000, 100000};
+                            map<int, vector<AlgorithmResult>> sizeResults;
+                            for(int testSize : sizes) {
+                                cout << "\nTesting with size " << testSize << "...\n";
+                                vector<int> newData(testSize);
+                                generate(newData.begin(), newData.end(), rand);
+                                auto sizeResult = AlgorithmPerformanceTester::parallelBenchmark(algorithms, testSize);
+                                sizeResults[testSize] = sizeResult;
+                            }
+                            
+                            // Display comparative results
+                            cout << "\nComparative Results:\n";
+                            cout << setw(20) << "Algorithm";
+                            for(int s : sizes) cout << setw(15) << s;
+                            cout << "\n" << string(65, '-') << "\n";
+                            
+                            for(size_t i = 0; i < algorithms.size(); i++) {
+                                cout << setw(20) << algorithms[i].first;
+                                for(int s : sizes) {
+                                    cout << setw(15) << sizeResults[s][i].execution_time;
+                                }
+                                cout << "\n";
+                            }
+                            break;
+                        }
+                    }
+
+                    if(benchmarkMode != 3) {
+                        cout << "\nParallel Benchmark Results:\n";
+                        PerformanceVisualizer::DisplayBarChart(results);
+                        
+                        // Additional statistics
+                        cout << "\nDetailed Statistics:\n";
+                        cout << string(60, '-') << "\n";
+                        for(const auto& result : results) {
+                            cout << result.algorithm_name << ":\n";
+                            cout << "  Time: " << result.execution_time << "ms\n";
+                            cout << "  Complexity: " << result.complexity << "\n";
+                            cout << "  Status: " << (result.success ? "Success" : "Failed") << "\n";
+                            if(!result.success) cout << "  Error: " << result.error_message << "\n";
+                            cout << "\n";
+                        }
+                    }
                     break;
                 }
+
                 default:
                     cout << "Invalid choice!\n";
             }

@@ -47,3 +47,49 @@ Sun Dec 15 00:09:42 2024
 Merge Sort: 0.12164ms, Custom Algorithm
 Sun Dec 15 00:09:42 2024
 Count Sort: 0.37884ms, Custom Algorithm
+Thu Dec 19 11:23:31 2024
+Count Sort: 0.12454ms, Custom Algorithm
+Thu Dec 19 14:11:42 2024
+Merge Sort: 0.00736ms, Custom Algorithm
+Thu Dec 19 14:11:42 2024
+Count Sort: 0.18092ms, Custom Algorithm
+Thu Dec 19 14:11:42 2024
+Heap Sort: 0.00204ms, Custom Algorithm
+Thu Dec 19 14:12:07 2024
+Quick Sort: 0.07356ms, Custom Algorithm
+Thu Dec 19 14:12:07 2024
+Merge Sort: 0.37654ms, Custom Algorithm
+Thu Dec 19 14:20:10 2024
+Vector Memory: 0.00136ms, Custom Algorithm
+Thu Dec 19 14:40:18 2024
+Dijkstra: 0.0018ms, Custom Algorithm
+Thu Dec 19 14:40:18 2024
+Bellman-Ford: 0.00094ms, Custom Algorithm
+Thu Dec 19 14:40:18 2024
+Floyd-Warshall: 0.00442ms, Custom Algorithm
+Thu Dec 19 14:40:18 2024
+DFS: 0.0031ms, Custom Algorithm
+Thu Dec 19 14:40:18 2024
+BFS: 0.00324ms, Custom Algorithm
+Thu Dec 19 14:40:18 2024
+Prim's MST: 0.00466ms, Custom Algorithm
+Thu Dec 19 14:40:18 2024
+Kruskal's MST: 0.0041ms, Custom Algorithm
+Thu Dec 19 14:40:36 2024
+Ford-Fulkerson: 0.00648ms, Custom Algorithm
+Thu Dec 19 14:40:36 2024
+Edmonds-Karp: 0.01292ms, Custom Algorithm
+Thu Dec 19 14:44:03 2024
+Quick Sort: 0.00446ms, Custom AlgorithmThu Dec 19 14:44:03 2024
+Binary Search: 0.00536ms, Custom Algorithm
+Thu Dec 19 14:44:03 2024
+Count Sort: 0.12628ms, Custom Algorithm
+Thu Dec 19 14:44:03 2024
+Radix Sort: 0.1204ms, Custom Algorithm
+rithm
+Thu Dec 19 14:44:03 2024
+Bucket Sort: 0.10562ms, Custom Algorithm
+Thu Dec 19 14:44:03 2024
+Shell Sort: 0.00108ms, Custom Algorithm
+Thu Dec 19 14:44:58 2024
+Vector Sort: 0.00046ms, Custom Algorithm
