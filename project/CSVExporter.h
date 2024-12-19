@@ -1,3 +1,4 @@
+
 #include <iostream>
 #include <vector>
 #include <algorithm>
@@ -171,6 +172,29 @@ public:
                 << (result.success ? "true" : "false") << ","
                 << result.error_message << "\n";
         }
+    }
+};
+
+// Add JSON export functionality
+class JSONExporter {
+public:
+    static void exportResults(const vector<AlgorithmResult>& results, const string& filename) {
+        ofstream json(filename);
+        json << "{\n  \"algorithms\": [\n";
+        
+        for (size_t i = 0; i < results.size(); ++i) {
+            const auto& result = results[i];
+            json << "    {\n"
+                 << "      \"name\": \"" << result.algorithm_name << "\",\n"
+                 << "      \"time\": " << result.execution_time << ",\n"
+                 << "      \"complexity\": \"" << result.complexity << "\",\n"
+                 << "      \"success\": " << (result.success ? "true" : "false") << ",\n"
+                 << "      \"memory\": " << getCurrentMemoryUsage() << ",\n"
+                 << "      \"error\": \"" << result.error_message << "\"\n"
+                 << "    }" << (i < results.size() - 1 ? "," : "") << "\n";
+        }
+        
+        json << "  ]\n}\n";
     }
 };
 
@@ -1403,6 +1427,9 @@ public:
                                      result.execution_time,
                                      complexityMap[result.algorithm_name].timeComplexity);
             }
+
+            // Export results to JSON
+            JSONExporter::exportResults(results, "algorithm_results.json");
 
         } catch (const exception& e) {
             cout << "Error in performance test: " << e.what() << "\n";
