@@ -93,3 +93,28 @@ Thu Dec 19 14:44:03 2024
 Shell Sort: 0.00108ms, Custom Algorithm
 Thu Dec 19 14:44:58 2024
 Vector Sort: 0.00046ms, Custom Algorithm
+Thu Dec 19 21:12:37 2024
+Dijkstra: 0.00286ms, Custom Algorithm
+Thu Dec 19 21:12:37 2024
+Bellman-Ford: 0.00068ms, Custom Algorithm
+Thu Dec 19 21:12:37 2024
+Floyd-Warshall: 0.00438ms, Custom Algorithm
+Thu Dec 19 21:12:37 2024
+DFS: 0.00312ms, Custom Algorithm
+Thu Dec 19 21:12:37 2024
+BFS: 0.00292ms, Custom Algorithm
+Thu Dec 19 21:12:37 2024
+Prim's MST: 0.0063ms, Custom Algorithm
+Thu Dec 19 21:12:37 2024
+Kruskal's MST: 0.00344ms, Custom Algorithm
+Thu Dec 19 21:13:39 2024
+Ford-Fulkerson: 0.0205ms, Custom Algorithm
+Thu Dec 19 21:13:39 2024
+Edmonds-Karp: 0.02268ms, Custom Algorithm
+Thu Dec 19 21:14:37 2024
+Quick Sort: 0.00228ms, Custom Algorithm
+Thu Dec 19 21:15:41 2024
+Count Sort: 0.1148ms, Custom Algorithm
+ithm
+Thu Dec 19 21:15:41 2024
+Quick Sort: 0.0021ms, Custom Algorithm
