@@ -60,5 +60,8 @@
         "variant": "cpp"
     },
     "makefile.makefilePath": "C:\\Users\\ayana\\Programming and Projects\\Algorithm---Design-Analysis\\project\\makefile",
-    "makefile.makePath": "C:\\Users\\ayana\\Programming and Projects\\Algorithm---Design-Analysis\\project\\makefile"
+    "makefile.makePath": "C:\\Users\\ayana\\Programming and Projects\\Algorithm---Design-Analysis\\project\\makefile",
+    "github.copilot.chat.codesearch.enabled": true,
+    "github.copilot.chat.newWorkspaceCreation.enabled": true,
+    "dart.previewCommitCharacters": true
 }
