@@ -63,5 +63,7 @@
     "makefile.makePath": "C:\\Users\\ayana\\Programming and Projects\\Algorithm---Design-Analysis\\project\\makefile",
     "github.copilot.chat.codesearch.enabled": true,
     "github.copilot.chat.newWorkspaceCreation.enabled": true,
-    "dart.previewCommitCharacters": true
+    "dart.previewCommitCharacters": true,
+    "rust-analyzer.inlayHints.genericParameterHints.type.enable": true,
+    "python.analysis.generateWithTypeAnnotation": true
 }
